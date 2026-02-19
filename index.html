@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0066ff">
+    <link rel="apple-touch-icon" href="assets/images/icon_192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Floating Ray World</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #0066ff, #ccf0ff);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            pointer-events: none;
+            user-select: none;
+            font-size: 13px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            letter-spacing: 0.1em;
+            transition: opacity 1s;
+        }
+
+        #time-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            user-select: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            z-index: 5;
+            white-space: pre;
+        }
+
+        #speed-display {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            user-select: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            z-index: 5;
+            text-align: right;
+        }
+
+        #contact-display {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            font-family: 'Courier New', Courier, monospace;
+            pointer-events: none;
+            user-select: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            z-index: 5;
+            text-align: center;
+        }
+
+        #contact-label {
+            font-size: 12px;
+            letter-spacing: 0.1em;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #contact-count {
+            font-size: 24px;
+        }
+
+        #guest-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(100, 100, 100, 0.2);
+            margin: 15px auto 0;
+            transition: background-color 0.5s, border-color 0.5s, box-shadow 0.5s;
+        }
+
+        .hud-btn {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            user-select: none;
+            z-index: 10;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .hud-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        #mute-btn {
+            top: 20px;
+            right: 20px;
+        }
+
+        #land-btn {
+            bottom: 30px;
+            right: 20px;
+        }
+
+        #speed-btn {
+            bottom: 80px;
+            right: 20px;
+        }
+
+        .arrow-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 40px;
+            color: rgba(255, 255, 255, 0.4);
+            cursor: pointer;
+            user-select: none;
+            padding: 20px;
+            z-index: 20;
+            transition: color 0.3s, text-shadow 0.3s;
+            display: none;
+            font-family: serif;
+        }
+
+        .arrow-btn:active {
+            color: rgba(255, 255, 255, 0.9);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        #left-arrow {
+            left: 20px;
+        }
+
+        #right-arrow {
+            right: 20px;
+        }
+
+        /* Camera Controls */
+        #cam-controls {
+            position: absolute;
+            top: 50%;
+            right: 180px;
+            /* Left of contact display */
+            transform: translateY(-50%);
+            display: none;
+            /* Visible only in Chase Mode */
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .cam-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+
+        .cam-btn:active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+    <script src="three.min.js"></script>
+</head>
+
+<body>
+    <div id="time-display">--/--/-- --:--</div>
+    <div id="speed-display">0 km/h</div>
+
+    <div id="contact-display">
+        <div id="contact-label">CONTACT</div>
+        <div id="contact-count">0</div>
+        <div id="guest-indicator"></div>
+    </div>
+
+    <style>
+        .contact-btn {
+            transition: all 0.3s;
+            border: 1px solid transparent;
+            padding: 2px 5px;
+            border-radius: 5px;
+        }
+
+        .contact-btn.active {
+            border-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            text-shadow: 0 0 10px #fff, 0 0 20px #fff;
+            cursor: pointer;
+            pointer-events: auto;
+        }
+    </style>
+
+    <!-- Camera Buttons -->
+    <!-- Camera Buttons Removed -->
+
+    <div id="ui">
+        タップして開始（音が出ます）
+    </div>
+
+    <div id="mute-btn" class="hud-btn">SOUND: ON</div>
+    <div id="speed-btn" class="hud-btn">NORMAL</div>
+    <div id="land-btn" class="hud-btn">LAND</div>
+
+    <div id="left-arrow" class="arrow-btn">❮</div>
+    <div id="right-arrow" class="arrow-btn">❯</div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW registered!', reg)).catch(err => console.log('SW failed', err));
+            });
+        }
+
+        // --- 設定 ---
+
+        const CONFIG = {
+            baseSpeed: 0.4,
+            maxSpeedAdd: 0.05,
+            turnSpeed: 0.025,
+            pitchSpeed: 0.015,
+            cameraDist: 25,
+            cameraHeight: 8,
+            cameraLag: 0.03,
+            groundColor: 0xdca8b5,
+            fogDensity: 0.0012,
+            chunkSize: 600,
+            gridSize: 9,
+            landingHeight: -22
+        };
+        let speedMode = 'NORMAL'; // 'NORMAL' or 'SLOW'
+
+        // --- 変数 ---
+
+        // --- 変数 ---
+        const bgmList = {
+            'day': [
+                'assets/audio/day musho.mp3',
+                'assets/audio/day gal.mp3',
+                'assets/audio/day por.mpm3',
+                'assets/audio/day koky.mp3'
+            ],
+            'night': [
+                'assets/audio/night 1.mp3',
+                'assets/audio/night seka.mp3',
+                'assets/audio/night seka2.mp3',
+                'assets/audio/night umi.mp3'
+            ]
+        };
+        let scene, camera, renderer;
+        let ray;
+        let wingTipL, wingTipR;
+        let serpents = [];
+        let dailyGuests = [];
+        let groundChunks = [];
+        let worldObjects = [];
+        let mountains = [];
+        let nightLights = [];
+        let basePlane;
+
+        let ambientLight, dirLight, rayLight;
+
+        let trailL, trailR;
+        let isVaporActive = false;
+
+        // Chase Mode
+        let isChasing = false;
+        let chaseTarget = null;
+        let potentialTarget = null; // Target currently highlighted by ring
+        let isAutoPiloting = false; // Auto-Chase Mode
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
+
+        let inputVector = new THREE.Vector2(0, 0);
+        let smoothedInput = new THREE.Vector2(0, 0);
+        let isTouching = false;
+
+        let isLanded = true;
+        let isLandingSequence = false;
+        let takeoffProgress = 0;
+
+        // Camera Controls Global
+        let isCamUpPressed = false;
+        let isCamDownPressed = false;
+
+        let isRotatingLeft = false;
+        let isRotatingRight = false;
+        let cameraAngle = 0;
+        let cameraRotationSpeed = 0;
+
+        let contactCount = 0;
+        let rayEmissiveIntensity = 0.0;
+
+        let clock = new THREE.Clock();
+        const uiElement = document.getElementById('ui');
+        const timeDisplay = document.getElementById('time-display');
+        const speedDisplay = document.getElementById('speed-display');
+        const contactCountDisplay = document.getElementById('contact-count');
+        const guestIndicator = document.getElementById('guest-indicator');
+        const muteBtn = document.getElementById('mute-btn');
+        const landBtn = document.getElementById('land-btn');
+        const speedBtn = document.getElementById('speed-btn');
+        const leftArrow = document.getElementById('left-arrow');
+        const rightArrow = document.getElementById('right-arrow');
+
+        let targetSkyColorTop = new THREE.Color(0x0066ff);
+        let targetSkyColorBottom = new THREE.Color(0xccf0ff);
+        let skyColorTop = new THREE.Color(0x0066ff);
+        let skyColorBottom = new THREE.Color(0xccf0ff);
+        let targetFogColor = new THREE.Color(0xccf0ff);
+        let targetAmbientIntensity = 0.5;
+        let targetDirIntensity = 0.6;
+        let isNight = false;
+
+        // リソース変数
+        let npcGeometry, npcMaterial;
+        let walkerMat, wHeadGeo, wBodyGeo, wArmGeo, wLegGeo;
+        let birdGeometry, birdMaterial;
+        let fishGeometry, fishMaterial;
+        let orbGeometry, orbMaterial;
+
+        // --- クラス定義: ベイパー ---
+        class VaporTrail {
+            constructor(scene, maxPoints = 150, width = 0.4) {
+                this.scene = scene;
+                this.maxPoints = maxPoints;
+                this.baseWidth = width;
+                this.history = [];
+                this.geometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(maxPoints * 2 * 3);
+                this.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                this.material = new THREE.MeshBasicMaterial({
+                    color: 0xffffff, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false,
+                });
+                this.mesh = new THREE.Mesh(this.geometry, this.material);
+                this.mesh.frustumCulled = false;
+                this.scene.add(this.mesh);
+                this.mesh.visible = false;
+            }
+            update(sourceObj, isEmitting) {
+                if (isEmitting) {
+                    const worldPos = new THREE.Vector3();
+                    sourceObj.getWorldPosition(worldPos);
+                    let tooClose = false;
+                    if (this.history.length > 0) {
+                        if (this.history[0].pos.distanceToSquared(worldPos) < 0.1) tooClose = true;
+                    }
+                    if (!tooClose) {
+                        this.history.unshift({ pos: worldPos, life: 1.0 });
+                        if (this.history.length > this.maxPoints) this.history.pop();
+                    }
+                }
+                for (let i = this.history.length - 1; i >= 0; i--) {
+                    this.history[i].life -= 0.005; // 修正：消えるまでの時間を長くする
+                    if (this.history[i].life <= 0) this.history.pop();
+                }
+                if (this.history.length < 2) {
+                    this.mesh.visible = false;
+                    return;
+                }
+                this.mesh.visible = true;
+                const positions = this.geometry.attributes.position.array;
+                let idx = 0;
+                for (let i = 0; i < this.history.length; i++) {
+                    const p = this.history[i];
+                    const w = this.baseWidth * Math.sin(p.life * Math.PI * 0.5);
+                    let dir = new THREE.Vector3();
+                    if (i < this.history.length - 1) dir.subVectors(this.history[i + 1].pos, p.pos).normalize();
+                    else if (i > 0) dir.subVectors(p.pos, this.history[i - 1].pos).normalize();
+                    else dir.set(0, 0, 1);
+                    if (dir.lengthSq() < 0.0001) dir.set(0, 0, 1);
+                    const side = new THREE.Vector3(0, 1, 0).cross(dir).normalize().multiplyScalar(w);
+                    positions[idx++] = p.pos.x + side.x; positions[idx++] = p.pos.y + side.y; positions[idx++] = p.pos.z + side.z;
+                    positions[idx++] = p.pos.x - side.x; positions[idx++] = p.pos.y - side.y; positions[idx++] = p.pos.z - side.z;
+                }
+                const filledCount = idx;
+                const lastX = positions[idx - 3];
+                const lastY = positions[idx - 2];
+                const lastZ = positions[idx - 1];
+                for (let i = filledCount; i < positions.length; i += 3) {
+                    positions[i] = lastX; positions[i + 1] = lastY; positions[i + 2] = lastZ;
+                }
+                this.geometry.attributes.position.needsUpdate = true;
+                this.geometry.setDrawRange(0, this.history.length * 2);
+            }
+        }
+
+        // --- 音響システム ---
+        const AudioSys = {
+            ctx: null,
+            masterGain: null,
+            reverbNode: null,
+            isPlaying: false,
+            bgmElement: null,
+            init: function () {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                    this.masterGain = this.ctx.createGain();
+                    this.masterGain.gain.value = 0.8;
+                    this.masterGain.connect(this.ctx.destination);
+                    this.reverbNode = this.ctx.createConvolver();
+                    this.reverbNode.buffer = this.createImpulseResponse();
+                    this.reverbNode.connect(this.masterGain);
+
+                    // BGM初期化
+                    this.bgmElement = new Audio();
+                    this.bgmElement.loop = true;
+                    this.bgmElement.volume = 0.4;
+
+                    muteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.toggleMute();
+                    });
+                } catch (e) { console.log(e); }
+            },
+            createImpulseResponse: function () {
+                const rate = this.ctx.sampleRate;
+                const length = rate * 4.0;
+                const decay = 2.0;
+                const impulse = this.ctx.createBuffer(2, length, rate);
+                const impulseL = impulse.getChannelData(0);
+                const impulseR = impulse.getChannelData(1);
+                for (let i = 0; i < length; i++) {
+                    const n = length - i;
+                    const multi = Math.pow(1 - i / length, decay);
+                    impulseL[i] = (Math.random() * 2 - 1) * multi;
+                    impulseR[i] = (Math.random() * 2 - 1) * multi;
+                }
+                return impulse;
+            },
+            start: function () {
+                if (!this.ctx) this.init();
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                if (this.isPlaying) return;
+                this.isPlaying = true;
+                // this.playDrone();
+                // this.scheduleNotes();
+                this.playRandomBGM();
+            },
+            playRandomBGM: function () {
+                if (!this.bgmElement) return;
+
+                // 昼夜によるリスト選択
+                let candidateList = [];
+                if (isNight) {
+                    candidateList = bgmList['night'];
+                } else {
+                    candidateList = bgmList['day'];
+                }
+
+                if (!candidateList || candidateList.length === 0) return;
+
+                // 現在再生中のものと違う曲を選ぶ
+                let nextSong = candidateList[Math.floor(Math.random() * candidateList.length)];
+                if (candidateList.length > 1 && this.bgmElement.src) {
+                    const currentSrc = decodeURI(this.bgmElement.src);
+                    let attempts = 0;
+                    // 同じ曲を避ける
+                    while (currentSrc.includes(nextSong.replace('./', '')) && attempts < 5) {
+                        nextSong = candidateList[Math.floor(Math.random() * candidateList.length)];
+                        attempts++;
+                    }
+                }
+
+                this.bgmElement.src = nextSong;
+                this.bgmElement.play().catch(e => console.log('BGM play failed', e));
+            },
+            toggleMute: function () {
+                if (!this.masterGain) return;
+                if (this.masterGain.gain.value > 0) {
+                    this.masterGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.5);
+                    if (this.bgmElement) this.bgmElement.volume = 0;
+                    muteBtn.innerText = "SOUND: OFF";
+                } else {
+                    this.masterGain.gain.setTargetAtTime(0.8, this.ctx.currentTime, 0.5);
+                    if (this.bgmElement) this.bgmElement.volume = 0.4;
+                    muteBtn.innerText = "SOUND: ON";
+                    if (this.ctx.state === 'suspended') this.ctx.resume();
+                    if (this.bgmElement && this.bgmElement.paused) this.bgmElement.play();
+                }
+            },
+            playDrone: function () {
+                const osc1 = this.ctx.createOscillator();
+                const osc2 = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc1.frequency.value = 110.00;
+                osc2.frequency.value = 110.15;
+                osc1.type = 'sine';
+                osc2.type = 'sine';
+                gain.gain.value = 0.15;
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(this.reverbNode);
+                osc1.start();
+                osc2.start();
+            },
+            playTone: function (freq, duration) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                const now = this.ctx.currentTime;
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + duration * 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(gain);
+                gain.connect(this.reverbNode);
+                osc.start();
+                osc.stop(now + duration);
+            },
+            scheduleNotes: function () {
+                if (!this.isPlaying) return;
+                const scale = [185.00, 207.65, 233.08, 277.18, 311.13, 369.99, 415.30];
+                const nextTime = 3000 + Math.random() * 4000;
+                const freq = scale[Math.floor(Math.random() * scale.length)];
+                const duration = 4.0 + Math.random() * 4.0;
+                this.playTone(freq, duration);
+                setTimeout(() => this.scheduleNotes(), nextTime);
+            },
+            playContactTone: function () {
+                if (!this.ctx || !this.isPlaying) return;
+                const now = this.ctx.currentTime;
+                const o1 = this.ctx.createOscillator();
+                const g1 = this.ctx.createGain();
+                o1.type = 'sine';
+                o1.frequency.setValueAtTime(880, now);
+                o1.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+                g1.gain.setValueAtTime(0.2, now);
+                g1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                o1.connect(g1);
+                g1.connect(this.masterGain);
+                o1.start();
+                o1.stop(now + 0.5);
+                const o2 = this.ctx.createOscillator();
+                const g2 = this.ctx.createGain();
+                o2.type = 'triangle';
+                o2.frequency.setValueAtTime(1108, now + 0.05);
+                g2.gain.setValueAtTime(0, now);
+                g2.gain.setValueAtTime(0.1, now + 0.05);
+                g2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                o2.connect(g2);
+                g2.connect(this.masterGain);
+                o2.start(now + 0.05);
+                o2.stop(now + 0.6);
+            }
+        };
+
+        // --- 全てのヘルパー関数定義 ---
+
+        function determineEnvironmentTarget(hour, minute) {
+            const t = hour * 60 + minute;
+            const t_0500 = 5 * 60;
+            const t_1100 = 11 * 60;
+            const t_1400 = 14 * 60;
+            const t_1600 = 16 * 60;
+            const t_1800 = 18 * 60;
+
+            if (t > t_0500 && t <= t_1100) {
+                targetSkyColorTop.setHex(0x0077ff); targetSkyColorBottom.setHex(0xcceeff); targetFogColor.setHex(0xcceeff);
+                targetAmbientIntensity = 0.4; targetDirIntensity = 0.5; isNight = false;
+            }
+            else if (t > t_1100 && t <= t_1400) {
+                targetSkyColorTop.setHex(0x0066ff); targetSkyColorBottom.setHex(0xccf0ff); targetFogColor.setHex(0xccf0ff);
+                targetAmbientIntensity = 0.5; targetDirIntensity = 0.6; isNight = false;
+            }
+            else if (t > t_1400 && t < t_1600) {
+                targetSkyColorTop.setHex(0x0055dd); targetSkyColorBottom.setHex(0xcce0ff); targetFogColor.setHex(0xcce0ff);
+                targetAmbientIntensity = 0.4; targetDirIntensity = 0.5; isNight = false;
+            }
+            else if (t >= t_1600 && t <= t_1800) {
+                targetSkyColorTop.setHex(0x4b0082); targetSkyColorBottom.setHex(0xff6f00); targetFogColor.setHex(0xff6f00);
+                targetAmbientIntensity = 0.4; targetDirIntensity = 0.5; isNight = false;
+            }
+            else {
+                // Night Mode - Moderate Dark (Visible but Atmospheric)
+                targetSkyColorTop.setHex(0x000018); // Deep Navy
+                targetSkyColorBottom.setHex(0x001133); // Dark Blue
+                targetFogColor.setHex(0x001133);
+                targetAmbientIntensity = 0.3; // Visible
+                targetDirIntensity = 0.2; // Subtle Moonlight
+                isNight = true;
+            }
+        }
+
+        function updateClock(instant) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const date = now.getDate().toString().padStart(2, '0');
+            const days = ['日曜日', '月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日'];
+            const dayStr = days[now.getDay()];
+            const hours = now.getHours();
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const strTime = `${year}/${month}/${date} ${hours}:${minutes} ${dayStr}`;
+            if (timeDisplay) timeDisplay.innerText = strTime;
+            determineEnvironmentTarget(hours, Number(minutes));
+            if (instant) updateEnvironment(true);
+        }
+
+        function updateEnvironment(instant = false) {
+            const lerpSpeed = instant ? 1.0 : 0.01;
+            skyColorTop.lerp(targetSkyColorTop, lerpSpeed);
+            skyColorBottom.lerp(targetSkyColorBottom, lerpSpeed);
+            const topStr = '#' + skyColorTop.getHexString();
+            const bottomStr = '#' + skyColorBottom.getHexString();
+            document.body.style.background = `linear-gradient(to bottom, ${topStr}, ${bottomStr})`;
+            scene.fog.color.lerp(targetFogColor, lerpSpeed);
+            ambientLight.intensity += (targetAmbientIntensity - ambientLight.intensity) * lerpSpeed;
+            dirLight.intensity += (targetDirIntensity - dirLight.intensity) * lerpSpeed;
+
+            // Debug Log (One time or periodic)
+            if (renderer.info.render.frame % 300 === 0) {
+                console.log("Env Update: Night=" + isNight + " Amb=" + ambientLight.intensity.toFixed(2));
+            }
+
+            if (rayLight) {
+                const targetRayLight = isNight ? 1.5 : 0.0;
+                rayLight.intensity += (targetRayLight - rayLight.intensity) * 0.05;
+            }
+            nightLights.forEach(lightObj => {
+                const pointLight = lightObj.children[0];
+                if (isNight) {
+                    lightObj.visible = true;
+                    const flicker = Math.sin(clock.elapsedTime * 3 + lightObj.userData.randomPhase) * 0.2 + 0.8;
+                    if (pointLight) {
+                        const targetInt = 2.5 * flicker;
+                        pointLight.intensity += (targetInt - pointLight.intensity) * 0.05;
+                    }
+                    lightObj.scale.setScalar(flicker * lightObj.userData.baseScale);
+                } else {
+                    if (pointLight) pointLight.intensity += (0 - pointLight.intensity) * 0.05;
+                    if (pointLight && pointLight.intensity < 0.01) lightObj.visible = false;
+                }
+            });
+            dailyGuests.forEach(guest => {
+                const targets = [];
+                if (guest.type === 'Group') guest.traverse(child => { if (child.isMesh) targets.push(child); });
+                else if (guest.isMesh) targets.push(guest);
+                targets.forEach(mesh => {
+                    if (!mesh.material.emissive) return;
+                    if (isNight) {
+                        const breath = Math.sin(clock.elapsedTime * 2 + (guest.userData.phase || 0)) * 0.3 + 0.7;
+                        const baseColor = mesh.material.color;
+                        const targetR = baseColor.r * 0.6 * breath;
+                        const targetG = baseColor.g * 0.6 * breath;
+                        const targetB = baseColor.b * 0.6 * breath;
+                        mesh.material.emissive.r += (targetR - mesh.material.emissive.r) * 0.05;
+                        mesh.material.emissive.g += (targetG - mesh.material.emissive.g) * 0.05;
+                        mesh.material.emissive.b += (targetB - mesh.material.emissive.b) * 0.05;
+                    } else {
+                        mesh.material.emissive.r += (0 - mesh.material.emissive.r) * 0.05;
+                        mesh.material.emissive.g += (0 - mesh.material.emissive.g) * 0.05;
+                        mesh.material.emissive.b += (0 - mesh.material.emissive.b) * 0.05;
+                    }
+                });
+            });
+
+
+            // Streamers (serpents) Day/Night update
+            serpents.forEach(s => {
+                if (isNight) {
+                    s.userData.baseOpacity = 0.8;
+                    s.material.opacity = s.userData.baseOpacity;
+                    s.material.color.setHex(0xaaccff); // Cyan glow
+                } else {
+                    s.userData.baseOpacity = 0.4;
+                    s.material.opacity = s.userData.baseOpacity;
+                    s.material.color.setHex(0xffffff); // White subtle
+                }
+            });
+        }
+
+        function initResources() {
+            // npcGeometry をプレイヤーと同じセグメント数に変更
+            npcGeometry = new THREE.PlaneGeometry(6, 5, 24, 12);
+            npcMaterial = new THREE.MeshPhongMaterial({ color: 0xaaddff, side: THREE.DoubleSide, shininess: 80, emissive: 0x051122, flatShading: false });
+
+            walkerMat = new THREE.MeshLambertMaterial({ color: 0xeeeeee, transparent: true, opacity: 0.9, emissive: 0x000000 });
+            wHeadGeo = new THREE.BoxGeometry(0.3, 0.3, 0.05);
+            wBodyGeo = new THREE.BoxGeometry(0.5, 0.8, 0.05);
+            wArmGeo = new THREE.BoxGeometry(0.15, 0.7, 0.05); wArmGeo.translate(0, -0.3, 0);
+            wLegGeo = new THREE.BoxGeometry(0.18, 0.8, 0.05); wLegGeo.translate(0, -0.4, 0);
+
+            // Bird Material Def
+            birdMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+
+            // 鳥（火曜日ゲスト）のジオメトリ改善
+            birdGeometry = new THREE.Group();
+            const bBody = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2, 4), new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x222222, flatShading: true }));
+            bBody.rotation.x = Math.PI / 2;
+            birdGeometry.add(bBody);
+            // 翼：少し丸みを持たせる
+            const bWingGeo = new THREE.PlaneGeometry(2, 1.5, 2, 2);
+            // 頂点を少し操作して有機的に
+            const bwPos = bWingGeo.attributes.position;
+            for (let i = 0; i < bwPos.count; i++) {
+                if (bwPos.getX(i) > 0.5) bwPos.setZ(i, -0.3); // 先端を少し下げる/反らせる
+            }
+            bWingGeo.computeVertexNormals();
+
+            const bWingL = new THREE.Mesh(bWingGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+            bWingL.position.set(-0.5, 0, 0.2);
+            bWingL.rotation.x = Math.PI / 2;
+            bWingL.rotation.z = 0.3;
+            bBody.add(bWingL);
+
+            const bWingR = new THREE.Mesh(bWingGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+            bWingR.position.set(0.5, 0, 0.2);
+            bWingR.rotation.x = Math.PI / 2;
+            bWingR.rotation.z = -0.3;
+            bBody.add(bWingR);
+
+            birdGeometry.userData = { lWing: bWingL, rWing: bWingR };
+
+            // 魚のジオメトリ改善
+            fishGeometry = new THREE.Group();
+            const fBody = new THREE.Mesh(new THREE.ConeGeometry(0.8, 3, 4), new THREE.MeshPhongMaterial({ color: 0x88ccff, emissive: 0x112233, flatShading: true }));
+            fBody.rotation.x = Math.PI / 2;
+            fishGeometry.add(fBody);
+            const fWingL = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2), new THREE.MeshPhongMaterial({ color: 0xaaddff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
+            fWingL.position.set(-0.8, 0, 0.5);
+            fWingL.rotation.x = Math.PI / 2;
+            fWingL.rotation.z = 0.2;
+            fBody.add(fWingL);
+            const fWingR = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2), new THREE.MeshPhongMaterial({ color: 0xaaddff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
+            fWingR.position.set(0.8, 0, 0.5);
+            fWingR.rotation.x = Math.PI / 2;
+            fWingR.rotation.z = -0.2;
+            fBody.add(fWingR);
+            // fishMaterial = new THREE.MeshPhongMaterial({ color: 0x88ccff, emissive: 0x000000 }); // Group化により不要
+            orbGeometry = new THREE.SphereGeometry(10, 32, 32); // サイズ5倍: 2 -> 10
+            orbMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffffee,
+                shininess: 100,
+                opacity: 0.8,
+                transparent: true,
+                emissive: 0xffaa00, // 常時発光
+                emissiveIntensity: 0.5
+            });
+        }
+
+        function createGroundChunk() {
+            const size = CONFIG.chunkSize; // Align vertices exactly (was * 1.05)
+            const segments = 48;
+            const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
+            const material = new THREE.MeshLambertMaterial({ color: CONFIG.groundColor, side: THREE.DoubleSide, flatShading: true });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.rotation.x = -Math.PI / 2;
+            return mesh;
+        }
+
+        function updateGroundGeometry(geometry, offsetX, offsetZ) {
+            const pos = geometry.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                const worldX = x + offsetX;
+                const worldZ = offsetZ - y; // Fix: Local Y is inverted relative to World Z due to rotation
+                const height = Math.sin(worldX * 0.01) * Math.cos(worldZ * 0.01) * 12 + Math.cos(worldX * 0.03) * Math.sin(worldZ * 0.03) * 4 + Math.sin(worldX * 0.06 + worldZ * 0.04) * 2;
+                pos.setZ(i, height);
+            }
+            geometry.computeVertexNormals();
+            pos.needsUpdate = true;
+        }
+
+        function resetNightLightPosition(obj) {
+            const centerX = ray ? ray.position.x : 0;
+            const centerZ = ray ? ray.position.z : 0;
+            const minRad = 600;
+            const maxRad = 2500;
+            for (let k = 0; k < 20; k++) {
+                const angle = Math.random() * Math.PI * 2;
+                const dist = minRad + Math.random() * (maxRad - minRad);
+                const tx = centerX + Math.cos(angle) * dist;
+                const tz = centerZ + Math.sin(angle) * dist;
+                let safe = true;
+                for (let m of mountains) {
+                    const dx = m.position.x - tx;
+                    const dz = m.position.z - tz;
+                    const sqDist = dx * dx + dz * dz;
+                    if (sqDist < 100 * 100) { safe = false; break; }
+                }
+                if (safe) {
+                    obj.position.x = tx; obj.position.z = tz; obj.position.y = -25 + Math.random() * 10;
+                    return;
+                }
+            }
+            const angle = Math.random() * Math.PI * 2;
+            const dist = maxRad;
+            obj.position.x = centerX + Math.cos(angle) * dist;
+            obj.position.z = centerZ + Math.sin(angle) * dist;
+            obj.position.y = -25 + Math.random() * 10;
+        }
+
+        function createNightLights() {
+            const geometry = new THREE.SphereGeometry(0.8, 8, 8);
+            const material = new THREE.MeshBasicMaterial({ color: 0xFFDD88 });
+            for (let i = 0; i < 150; i++) {
+                const lightObj = new THREE.Mesh(geometry, material);
+                const pointLight = new THREE.PointLight(0xFFaa55, 0, 80);
+                pointLight.decay = 2;
+                lightObj.add(pointLight);
+                resetNightLightPosition(lightObj);
+                lightObj.userData.baseScale = 1.0;
+                lightObj.userData.randomPhase = Math.random() * 100;
+                lightObj.visible = false;
+                scene.add(lightObj);
+                nightLights.push(lightObj);
+                worldObjects.push(lightObj);
+            }
+        }
+
+        function resetObjectPosition(obj) {
+            const centerX = ray ? ray.position.x : 0;
+            const centerZ = ray ? ray.position.z : 0;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 600 + Math.random() * 1900;
+            obj.position.x = centerX + Math.cos(angle) * dist;
+            obj.position.z = centerZ + Math.sin(angle) * dist;
+            if (obj.geometry && obj.geometry.type === 'SphereGeometry' && obj.material.type === 'MeshLambertMaterial') {
+                obj.position.y = -35;
+            } else if (obj.userData && obj.userData.direction) {
+            } else {
+                obj.position.y = Math.random() * 50 + 20;
+            }
+            if (obj.material.opacity === 0.3) {
+                const scaleH = 15 + Math.random() * 30;
+                const scaleV = 3 + Math.random() * 4;
+                obj.scale.set(scaleH, scaleV, scaleH * (0.8 + Math.random() * 0.4));
+                obj.rotation.y = Math.random() * Math.PI;
+            }
+        }
+
+        function createMountains() {
+            const geometry = new THREE.SphereGeometry(30, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.5);
+            // 修正：山を不透明にして、透過トレイルの手前に描画される(=トレイルが隠れる)のを防ぐ。0.9の透過はほぼ不透明なので大きな見た目の変化はないはず
+            const material = new THREE.MeshLambertMaterial({ color: CONFIG.groundColor, opacity: 1.0, transparent: false, side: THREE.DoubleSide });
+            for (let i = 0; i < 150; i++) {
+                const mountain = new THREE.Mesh(geometry, material);
+                resetObjectPosition(mountain);
+                const scaleY = 1.5 + Math.random() * 2.5;
+                const scaleXZ = 1.5 + Math.random() * 1.5;
+                mountain.scale.set(scaleXZ, scaleY, scaleXZ);
+                scene.add(mountain);
+                worldObjects.push(mountain);
+                mountains.push(mountain);
+            }
+        }
+
+        function createClouds() {
+            const geometry = new THREE.SphereGeometry(1, 16, 16);
+            const material = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.3, transparent: true });
+            for (let i = 0; i < 200; i++) {
+                const cloud = new THREE.Mesh(geometry, material);
+                resetObjectPosition(cloud);
+                cloud.position.y = Math.random() * 50 + 20;
+                scene.add(cloud);
+                worldObjects.push(cloud);
+            }
+        }
+
+        function createRay() {
+            // Restore PlaneGeometry for flapping animation.
+            const geometry = new THREE.PlaneGeometry(6, 5, 24, 12);
+            // Rotate Geometry:
+            // 1. -90 X => Normal Up (+Y), Head Back (-Z)
+            // 2. 180 Y => Head Forward (+Z), X Flipped (Left/Right swap)
+            geometry.rotateX(-Math.PI / 2);
+            geometry.rotateY(Math.PI);
+
+            const material = new THREE.MeshPhongMaterial({ color: 0xaaddff, side: THREE.DoubleSide, shininess: 80, emissive: 0x051122, flatShading: false, transparent: true, opacity: 0.95 });
+            ray = new THREE.Mesh(geometry, material);
+            ray.rotation.order = 'YXZ'; // Standard rotation order
+            scene.add(ray);
+
+            // Tail lines: Start from Back (Z = -2.5) to (-12)
+            const tailGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -2.5), new THREE.Vector3(0, 0, -12)]);
+            const tailMat = new THREE.LineBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.7 });
+            const tail = new THREE.Line(tailGeo, tailMat);
+            ray.add(tail);
+
+            rayLight = new THREE.PointLight(0xaaddff, 0.0, 50);
+            rayLight.position.set(0, 2, 0); // Up
+            ray.add(rayLight);
+
+            // WingTips: Left at -X, Right at +X
+            wingTipL = new THREE.Object3D(); wingTipL.position.set(-3, 0, 0); ray.add(wingTipL);
+            wingTipR = new THREE.Object3D(); wingTipR.position.set(3, 0, 0); ray.add(wingTipR);
+        }
+
+        // 光の筋（Streamer）
+        function createAmbientStreamer() {
+            const segments = 40;
+            // 細長く、先細り形状にする (3倍の長さ: 90~120)
+            const length = 100;
+            const geometry = new THREE.PlaneGeometry(3.0, length, 1, segments);
+
+            // Tapering (先細り)
+            const pos = geometry.attributes.position;
+            const halfLen = length / 2;
+            for (let i = 0; i < pos.count; i++) {
+                const y = pos.getY(i);
+                // 0(端) -> 1(中央) -> 0(端) の係数
+                const u = (y + halfLen) / length; // 0.0 ~ 1.0
+                const widthScale = Math.sin(u * Math.PI);
+                pos.setX(i, pos.getX(i) * widthScale);
+            }
+            geometry.computeVertexNormals();
+
+            // マテリアル
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xaaccff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.6,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData = {
+                speed: 0.3 + Math.random() * 0.4,
+                wiggleSpeed: 0.5 + Math.random() * 1.0,
+                offset: Math.random() * 100,
+                direction: new THREE.Vector3(0, 0, 1)
+            };
+            mesh.rotation.x = -Math.PI / 2;
+            resetObjectPosition(mesh);
+            mesh.position.y = Math.random() * 50 + 10;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        function resetGuestPosition(obj) {
+            const centerX = ray ? ray.position.x : 0;
+            const centerZ = ray ? ray.position.z : 0;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 600 + Math.random() * 1900;
+            obj.position.x = centerX + Math.cos(angle) * dist;
+            obj.position.z = centerZ + Math.sin(angle) * dist;
+            if (obj.userData.guestType === 'walker') obj.position.y = -22;
+            else if (obj.userData.guestType === 'bird') obj.position.y = Math.random() * 30 + 10;
+            else if (obj.userData.guestType === 'fish') obj.position.y = Math.random() * 20 - 10;
+            else if (obj.userData.guestType === 'orb') obj.position.y = Math.random() * 40 - 10;
+            else if (obj.userData.guestType === 'npcRay') obj.position.y = Math.random() * 30;
+            obj.rotation.y = Math.random() * Math.PI * 2;
+            obj.userData.isContacting = false;
+            obj.userData.lastPosition = obj.position.clone();
+            obj.userData.velocity = new THREE.Vector3();
+            obj.userData.baseY = obj.position.y; // Store base altitude
+        }
+
+        function addGuest(obj, type) {
+            obj.userData.isGuest = true;
+            obj.userData.guestType = type;
+            obj.userData.isContacting = false;
+            scene.add(obj);
+            dailyGuests.push(obj);
+            worldObjects.push(obj);
+            resetGuestPosition(obj);
+        }
+
+        function createNpcRay() {
+            // アニメーションのためにジオメトリを複製して使用
+            const geometry = npcGeometry.clone();
+            const npc = new THREE.Mesh(geometry, npcMaterial);
+            npc.rotation.order = 'YXZ';
+            npc.rotation.x = -Math.PI / 2;
+            npc.userData.swimSpeed = 0.35; // Increased speed (~20km/h+)
+            npc.userData.turnTimer = 0;
+            npc.userData.direction = new THREE.Vector3(0, 1, 0); // Local Y is Forward for Ray
+            npc.userData.targetDirection = new THREE.Vector3(0, 1, 0);
+            npc.userData.phase = Math.random() * 100;
+            npc.scale.set(1.5, 1.5, 1.5);
+
+            // 尻尾を追加
+            const tailGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -2.5, 0), new THREE.Vector3(0, -12, 0)]);
+            const tailMat = new THREE.LineBasicMaterial({ color: 0xaaddff, transparent: true, opacity: 0.7 });
+            const tail = new THREE.Line(tailGeo, tailMat);
+            npc.add(tail);
+
+            addGuest(npc, 'npcRay');
+        }
+
+        function createWalker(isMany) {
+            const walkerGroup = new THREE.Group();
+            const head = new THREE.Mesh(wHeadGeo, walkerMat); head.position.y = 1.3; walkerGroup.add(head);
+            const body = new THREE.Mesh(wBodyGeo, walkerMat); body.position.y = 0.7; walkerGroup.add(body);
+            const leftArm = new THREE.Mesh(wArmGeo, walkerMat); leftArm.position.set(-0.35, 1.0, 0); walkerGroup.add(leftArm);
+            const rightArm = new THREE.Mesh(wArmGeo, walkerMat); rightArm.position.set(0.35, 1.0, 0); walkerGroup.add(rightArm);
+            const leftLeg = new THREE.Mesh(wLegGeo, walkerMat); leftLeg.position.set(-0.15, 0.3, 0); walkerGroup.add(leftLeg);
+            const rightLeg = new THREE.Mesh(wLegGeo, walkerMat); rightLeg.position.set(0.15, 0.3, 0); walkerGroup.add(rightLeg);
+            walkerGroup.userData.limbs = { leftArm, rightArm, leftLeg, rightLeg };
+            walkerGroup.userData.walkSpeed = 0.05 + Math.random() * 0.03;
+            walkerGroup.userData.animSpeed = 8 + Math.random() * 4;
+            walkerGroup.userData.phase = Math.random() * 100;
+            walkerGroup.scale.set(4, 4, 4);
+            addGuest(walkerGroup, 'walker');
+        }
+
+        function createBird() {
+            // スケッチに基づく鳥 (胴体 + 翼 + 尾翼)
+            const bird = new THREE.Group();
+            // 胴体
+            const bodyGeo = new THREE.ConeGeometry(0.4, 3, 8);
+            bodyGeo.rotateX(Math.PI / 2); // 前向き
+            const body = new THREE.Mesh(bodyGeo, birdMaterial);
+            bird.add(body);
+
+            // 翼
+            const wingShape = new THREE.Shape();
+            wingShape.moveTo(0, 0);
+            wingShape.lineTo(2.5, -1.0); // 翼端
+            wingShape.lineTo(2.2, -1.5);
+            wingShape.lineTo(0, -0.5);
+            const wingGeo = new THREE.ShapeGeometry(wingShape);
+
+            const lWing = new THREE.Mesh(wingGeo, birdMaterial);
+            lWing.position.set(0, 0, 0.5); // 胴体より少し前/後調整
+            lWing.rotation.x = -Math.PI / 2; // 水平
+
+            const rWing = lWing.clone();
+            rWing.scale.x = -1; // 反転
+
+            // 翼を親に追加せず、個別制御用プロパティを持たせるなら構造維持が必要だが、
+            // ここではシンプルにGroupに追加し、アニメーションで rotation.z を動かす
+            // 親(bird)がY軸回転するので、翼はZ軸回転ではばたく(ローカル)
+            // Group構造: Bird -> [Body, LeftWingParent->Wing, RightWingParent->Wing] の方が綺麗だが
+            // 既存のアニメーション: obj.userData.lWing.rotation.z
+            // 翼のピボット中心を胴体にしたい。Shapeは原点(0,0)から描いたのでOK。
+
+            const lPiv = new THREE.Object3D(); lPiv.add(lWing); bird.add(lPiv);
+            const rPiv = new THREE.Object3D(); rPiv.add(rWing); bird.add(rPiv);
+
+            bird.userData.lWing = lPiv;
+            bird.userData.rWing = rPiv;
+
+            // 尾翼
+            const tailGeo = new THREE.PlaneGeometry(1.2, 0.8);
+            const tail = new THREE.Mesh(tailGeo, birdMaterial);
+            tail.rotation.x = -Math.PI / 2;
+            tail.position.z = -1.5;
+            bird.add(tail);
+
+            bird.userData.flySpeed = 0.2 + Math.random() * 0.1;
+            bird.userData.phase = Math.random() * 100;
+            // Straight Flight Logic Init
+            bird.userData.direction = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            bird.userData.targetDirection = bird.userData.direction.clone();
+            bird.userData.turnTimer = Math.random() * 300;
+            bird.rotation.y = Math.atan2(bird.userData.direction.x, bird.userData.direction.z);
+
+            addGuest(bird, 'bird');
+        }
+        function createFish() {
+            // スケッチに基づくトビウオ (ロケット型 + ヒレ)
+            const fish = new THREE.Group();
+
+            const bodyGeo = new THREE.CylinderGeometry(0.1, 0.3, 2.5, 8);
+            bodyGeo.rotateX(Math.PI / 2);
+            const body = new THREE.Mesh(bodyGeo, new THREE.MeshLambertMaterial({ color: 0x88ccff }));
+            fish.add(body);
+
+            // 大きな胸ビレ
+            const finGeo = new THREE.PlaneGeometry(1.5, 1.0);
+            const lFin = new THREE.Mesh(finGeo, new THREE.MeshLambertMaterial({ color: 0xaaddff, side: THREE.DoubleSide }));
+            lFin.rotation.x = -Math.PI / 2;
+            lFin.position.set(0.8, 0, 0.5);
+            lFin.rotation.z = -0.3; // 後退角
+            fish.add(lFin);
+
+            const rFin = lFin.clone();
+            rFin.position.set(-0.8, 0, 0.5);
+            rFin.rotation.z = 0.3;
+            fish.add(rFin);
+
+            fish.scale.set(1.5, 1.5, 1.5);
+            fish.userData.swimSpeed = 0.3 + Math.random() * 0.1;
+            fish.userData.phase = Math.random() * 100;
+
+            // Straight Flight Logic (Same as Bird)
+            fish.userData.direction = new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            fish.userData.targetDirection = fish.userData.direction.clone();
+            fish.userData.turnTimer = Math.random() * 300;
+            fish.rotation.y = Math.atan2(fish.userData.direction.x, fish.userData.direction.z);
+
+            addGuest(fish, 'fish');
+        }
+        function createOrb() {
+            const orbMat = new THREE.MeshBasicMaterial({ color: 0xffffee, transparent: true, opacity: 0.8 }); // Slightly more opaque core
+            const orb = new THREE.Mesh(orbGeometry, orbMat);
+
+            // Strong Light to illuminate mountains
+            const light = new THREE.PointLight(0xffaa88, 3.0, 100); // Warm light, radius 100
+            orb.add(light);
+
+            orb.userData.floatSpeed = 0.02; orb.userData.phase = Math.random() * 100;
+            addGuest(orb, 'orb');
+        }
+
+        function createDailyGuests(day) {
+            let targetDay = day;
+            if (day === 0) targetDay = Math.floor(Math.random() * 6) + 1;
+            switch (targetDay) {
+                case 1: for (let i = 0; i < 10; i++) createWalker(false); break;
+                case 2: for (let i = 0; i < 15; i++) createBird(); break;
+                case 3: for (let i = 0; i < 30; i++) createFish(); break;
+                case 4: for (let i = 0; i < 20; i++) createOrb(); break;
+                case 5: for (let i = 0; i < 30; i++) createWalker(true); break;
+                case 6: for (let i = 0; i < 20; i++) createNpcRay(); break;
+            }
+        }
+
+        function startTakeoff() {
+            isLanded = false;
+            isLandingSequence = false;
+            takeoffProgress = 0;
+            uiElement.innerText = "なぞって旋回　自由に泳ぐ";
+            landBtn.innerText = "LAND";
+            leftArrow.style.display = 'none';
+            rightArrow.style.display = 'none';
+            cameraAngle = 0;
+            cameraRotationSpeed = 0;
+        }
+
+        function onInputMove(e) {
+            if (e.buttons === 1) { isTouching = true; updateInput(e.clientX, e.clientY); } else { isTouching = false; }
+        }
+        function updateInput(screenX, screenY) {
+            const x = (screenX / window.innerWidth) * 2 - 1;
+            const y = -(screenY / window.innerHeight) * 2 + 1;
+            inputVector.set(x, y);
+        }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function checkCollisions() {
+            if (!ray) return;
+            const rayRadius = 3.0;
+            mountains.forEach(mountain => {
+                const mPos = mountain.position;
+                const baseRadius = 30;
+                const maxRadiusXZ = baseRadius * mountain.scale.x;
+                const dx = ray.position.x - mPos.x;
+                const dz = ray.position.z - mPos.z;
+                const distXZ = Math.sqrt(dx * dx + dz * dz);
+                if (distXZ > maxRadiusXZ + rayRadius) return;
+                if (distXZ < 0.001) return;
+                const val = 30 * 30 - (distXZ / mountain.scale.x) ** 2;
+                if (val <= 0) return;
+                const heightFromCenter = Math.sqrt(val) * mountain.scale.y;
+                const surfaceY = mPos.y + heightFromCenter;
+                const targetY = surfaceY + 2.0;
+                if (ray.position.y < targetY) {
+                    const liftAmount = (targetY - ray.position.y) * 0.15;
+                    ray.position.y += liftAmount;
+                    const pushDirX = dx / distXZ;
+                    const pushDirZ = dz / distXZ;
+                    const pushStrength = 0.4;
+                    ray.position.x += pushDirX * pushStrength;
+                    ray.position.z += pushDirZ * pushStrength;
+                }
+            });
+        }
+
+        function checkGuestCollisions() {
+            if (!ray) return;
+            const threshold = 8.0;
+            dailyGuests.forEach(guest => {
+                const isOrb = guest.userData.guestType === 'orb';
+                const baseThreshold = isOrb ? 15.0 : 8.0; // Orb radius is 10, so 15 allows outer rim contact
+                const dist = ray.position.distanceTo(guest.position);
+                if (dist < baseThreshold) {
+                    if (!guest.userData.isContacting) {
+                        guest.userData.isContacting = true;
+                        guest.userData.contacted = true; // Mark as interacted for button hiding
+                        contactCount++;
+                        if (contactCountDisplay) contactCountDisplay.innerText = contactCount;
+                        rayEmissiveIntensity = 1.0;
+                        AudioSys.playContactTone();
+                        if (contactCount > 0 && contactCount % 5 === 0) {
+                            AudioSys.playRandomBGM();
+                        }
+
+                        // Auto-Pilot Success: Disengage Everything
+                        if (isAutoPiloting) {
+                            isAutoPiloting = false;
+                            isChasing = false;
+                            chaseTarget = null;
+                            uiElement.innerText = "なぞって旋回　自由に泳ぐ";
+                            // Restore Ray Color
+                            const baseR = 0x05 / 255; const baseG = 0x11 / 255; const baseB = 0x22 / 255;
+                            ray.material.emissive.setRGB(baseR, baseG, baseB);
+                        }
+                    }
+                } else {
+                    // Contact Lost
+                    if (guest.userData.isContacting) {
+                        guest.userData.isContacting = false;
+                    }
+                }
+            });
+        }
+
+        function updateVapor(speedKmH) {
+            let isEmitting = false;
+            if (!isVaporActive && speedKmH >= 43) isVaporActive = true;
+            else if (isVaporActive && speedKmH <= 42) isVaporActive = false;
+            if (isVaporActive && ray && !isLanded) isEmitting = true;
+            if (trailL) trailL.update(wingTipL, isEmitting);
+            if (trailR) trailR.update(wingTipR, isEmitting);
+        }
+
+        function updateGuestIndicator() {
+            if (!ray) return;
+            let minDist = Infinity;
+            dailyGuests.forEach(guest => {
+                const d = ray.position.distanceTo(guest.position);
+                if (d < minDist) minDist = d;
+            });
+            const distVisible = 2500;
+            const distNear = 600;
+            if (minDist < distNear) {
+                guestIndicator.style.backgroundColor = 'rgba(200, 100, 255, 0.6)';
+                guestIndicator.style.borderColor = 'rgba(255, 200, 255, 0.8)';
+                guestIndicator.style.boxShadow = '0 0 10px rgba(200, 100, 255, 0.5)';
+            } else if (minDist < distVisible) {
+                guestIndicator.style.backgroundColor = 'rgba(100, 200, 255, 0.6)';
+                guestIndicator.style.borderColor = 'rgba(200, 240, 255, 0.8)';
+                guestIndicator.style.boxShadow = '0 0 5px rgba(100, 200, 255, 0.3)';
+            } else {
+                guestIndicator.style.backgroundColor = 'rgba(100, 100, 100, 0.2)';
+                guestIndicator.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                guestIndicator.style.boxShadow = 'none';
+            }
+        }
+
+        function fixCameraAngleOnLanding() {
+            if (!ray || !camera) return;
+            const dx = camera.position.x - ray.position.x;
+            const dz = camera.position.z - ray.position.z;
+            const currentWorldAngle = Math.atan2(dz, dx);
+            const rayBackAngle = ray.rotation.y + Math.PI / 2;
+            let diff = currentWorldAngle - rayBackAngle;
+            while (diff <= -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            cameraAngle = diff;
+            cameraRotationSpeed = 0;
+        }
+
+        // --- Chase Mode Logic ---
+        function updateChaseLogic() {
+            if (!ray || !selectionRing) return;
+
+            // 1. Highlight (Selection Ring)
+            if (!isChasing) {
+                let closestDist = Infinity;
+                let target = null;
+                const threshold = 150.0; // Increased range (3x)
+
+                // Find closest trackable guest
+                [...dailyGuests, ...worldObjects].forEach(obj => {
+                    if (obj.userData.isGuest) { // Included Orbs
+                        const d = ray.position.distanceTo(obj.position);
+
+                        // Reset Contacted Flag if far enough
+                        if (obj.userData.contacted && d > 200.0) {
+                            obj.userData.contacted = false;
+                        }
+
+                        // Skip if recently contacted (unless reset)
+                        if (obj.userData.contacted) return;
+
+                        if (d < threshold && d < closestDist) {
+                            closestDist = d;
+                            target = obj;
+                        }
+                    }
+                });
+
+                const contactLabel = document.getElementById('contact-label');
+
+                if (target) {
+                    potentialTarget = target;
+                    if (contactLabel) {
+                        contactLabel.classList.add('active');
+                        contactLabel.classList.add('contact-btn');
+                    }
+
+                    selectionRing.position.copy(target.position);
+                    selectionRing.lookAt(camera.position); // Billboard
+                    selectionRing.material.opacity = Math.max(0, 1.0 - (closestDist / threshold));
+
+                    // Pulse effect
+                    const scale = 1.0 + Math.sin(clock.getElapsedTime() * 5) * 0.1;
+                    selectionRing.scale.set(scale, scale, scale);
+                } else {
+                    potentialTarget = null;
+                    if (contactLabel) {
+                        contactLabel.classList.remove('active');
+                        contactLabel.classList.remove('contact-btn');
+                    }
+                    selectionRing.material.opacity = 0;
+                }
+            } else {
+                selectionRing.material.opacity = 0; // Hide ring while chasing
+                const contactLabel = document.getElementById('contact-label');
+                if (contactLabel) {
+                    contactLabel.classList.remove('active');
+                    contactLabel.classList.remove('contact-btn');
+                }
+            }
+
+            // 2. Chase Physics
+            if (isChasing && chaseTarget) {
+                // --- Auto-Pilot Logic ---
+                if (isAutoPiloting) {
+                    // Move directly to target
+                    const dir = new THREE.Vector3().subVectors(chaseTarget.position, ray.position).normalize();
+                    const speed = 2.0; // Fast speed
+                    ray.position.addScaledVector(dir, speed);
+                    ray.lookAt(chaseTarget.position);
+                    return; // Skip normal chase physics
+                }
+
+                const targetPos = chaseTarget.position;
+
+                // Initialize smoothed chase direction if needed
+                if (!ray.userData.chaseDir) {
+                    ray.userData.chaseDir = new THREE.Vector3(0, 0, 1).applyQuaternion(ray.quaternion);
+                }
+
+                // Determine Moving Direction from Velocity
+                const vel = chaseTarget.userData.velocity;
+                const targetDir = new THREE.Vector3();
+
+                // Use velocity if moving significant amount, else fallback to orientation
+                if (vel && vel.lengthSq() > 0.0001) {
+                    targetDir.copy(vel).normalize();
+                } else {
+                    targetDir.set(0, 0, 1).applyQuaternion(chaseTarget.quaternion);
+                }
+
+                // Smoothly interpolate chase direction (Stability: Ignore small wiggles)
+                // Very slow lerp (0.02) to filter out jitter
+                ray.userData.chaseDir.lerp(targetDir, 0.02);
+                ray.userData.chaseDir.normalize();
+
+                // --- Smoothed Target Position (Fix L/R wobble) ---
+                if (!ray.userData.smoothedTargetPos) ray.userData.smoothedTargetPos = chaseTarget.position.clone();
+                ray.userData.smoothedTargetPos.lerp(chaseTarget.position, 0.05);
+
+                // Ideal Position: Far Behind (120 units - 5x Distance)
+                const chaseDist = 120.0;
+
+                // Position is strictly BEHIND the smoothed direction
+                // Maintain target's Y height (plus slight offset if needed, but keeping simple)
+                const idealPos = ray.userData.smoothedTargetPos.clone().addScaledVector(ray.userData.chaseDir, -chaseDist);
+
+                // Ensure we don't go underground, but allow high flight
+                if (idealPos.y < 10) idealPos.y = 10; // Minimum safety height
+
+                // --- Player Mountain Avoidance (User Request) ---
+                // Check if idealPos is inside a mountain
+                // Iterate mountains to find max height at idealPos (x, z)
+                let maxMtHeight = -Infinity;
+                mountains.forEach(mt => {
+                    const dx = idealPos.x - mt.position.x;
+                    const dz = idealPos.z - mt.position.z;
+                    const distSq = dx * dx + dz * dz;
+                    // Check horizontal range (Radius 30 * scaleX) + margin
+                    const mtRadius = 30 * mt.scale.x;
+                    if (distSq < (mtRadius + 10) ** 2) {
+                        // Approximate height at this XZ:
+                        // Ellipsoid: y = my + sy * sqrt(R^2 - ...)
+                        // Simplified: Just use the top of the mountain to be safe?
+                        // Or slightly better: Check if we are really deep.
+                        // Let's use the Max Height (Top) of this mountain as a safety floor if we are within its radius.
+                        // This prevents diving INTO it.
+                        // Ideally we'd trace the curve, but Top is safest and easiest.
+                        const mtTop = 30 * mt.scale.y + 15; // +15 safety buffer
+                        if (mtTop > maxMtHeight) maxMtHeight = mtTop;
+                    }
+                });
+
+                if (maxMtHeight > -Infinity && idealPos.y < maxMtHeight) {
+                    idealPos.y = maxMtHeight;
+                }
+
+                // Move Ray (LERP position for smooth catch-up)
+                ray.position.lerp(idealPos, 0.05);
+
+                // Rotation: Look at TARGET (Smoothly)
+                const lookTarget = ray.userData.smoothedTargetPos.clone();
+                const dummy = new THREE.Object3D();
+                dummy.position.copy(ray.position);
+                dummy.lookAt(lookTarget);
+                ray.quaternion.slerp(dummy.quaternion, 0.05);
+
+                // Visuals
+                ray.material.emissive.setHex(0xa020f0);
+            }
+        }
+
+        // --- メイン初期化処理 ---
+        function init() {
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0xccf0ff, CONFIG.fogDensity);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 6000);
+            camera.position.set(0, 10, 30);
+
+            // Audio System Init
+            AudioSys.init();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // スマホでの解像度を少し落とす（最大1.5 -> 1.2へ）
+            // 2.0だと4Kクラスのスマホで負荷が大きすぎるため
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+            document.body.appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(50, 100, 50);
+            scene.add(dirLight);
+
+            const baseGeo = new THREE.PlaneGeometry(12000, 12000);
+            const baseMat = new THREE.MeshBasicMaterial({ color: CONFIG.groundColor });
+            basePlane = new THREE.Mesh(baseGeo, baseMat);
+            basePlane.rotation.x = -Math.PI / 2;
+            basePlane.position.y = -60;
+            scene.add(basePlane);
+
+            initResources();
+
+            const halfGrid = Math.floor(CONFIG.gridSize / 2);
+            for (let x = -halfGrid; x <= halfGrid; x++) {
+                for (let z = -halfGrid; z <= halfGrid; z++) {
+                    const xPos = x * CONFIG.chunkSize;
+                    const zPos = z * CONFIG.chunkSize;
+                    const chunk = createGroundChunk();
+                    chunk.position.set(xPos, -30, zPos);
+                    updateGroundGeometry(chunk.geometry, xPos, zPos);
+                    scene.add(chunk);
+                    groundChunks.push(chunk);
+                }
+            }
+
+            createMountains();
+            createClouds();
+            createRay();
+            createNightLights();
+
+            // Create Selection Ring (for Chase Mode)
+            const ringGeo = new THREE.RingGeometry(4, 4.5, 32);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.0, // Initially invisible
+                depthTest: false // Always visible on top (optional, but might be good)
+            });
+            selectionRing = new THREE.Mesh(ringGeo, ringMat);
+            selectionRing.rotation.x = -Math.PI / 2; // Flat on ground initially, or billboard? User said "Circle around selection"
+            // If guests are 3D and flying, billboard might be better. 
+            // Diagram shows circle surrounding the object. Let's make it lookAt camera or just flat?
+            // "Thin circle around close state". Let's try billboard for flying objects.
+            scene.add(selectionRing);
+
+            for (let i = 0; i < 30; i++) {
+                serpents.push(createAmbientStreamer());
+            }
+
+            const today = new Date().getDay();
+            createDailyGuests(today);
+
+            trailL = new VaporTrail(scene);
+            trailR = new VaporTrail(scene);
+
+            if (ray) {
+                ray.position.y = CONFIG.landingHeight;
+            }
+
+            updateClock(true);
+
+            // リスナー登録
+            const setupArrow = (element, isLeft) => {
+                const start = (e) => {
+                    e.stopPropagation();
+                    if (isLeft) isRotatingLeft = true;
+                    else isRotatingRight = true;
+                };
+                const end = (e) => {
+                    e.stopPropagation();
+                    if (isLeft) isRotatingLeft = false;
+                    else isRotatingRight = false;
+                };
+                element.addEventListener('mousedown', start);
+                element.addEventListener('touchstart', start, { passive: false });
+                element.addEventListener('mouseup', end);
+                element.addEventListener('mouseleave', end);
+                element.addEventListener('touchend', end);
+            };
+
+            setupArrow(leftArrow, true);
+            setupArrow(rightArrow, false);
+
+            landBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (isLanded) {
+                    startTakeoff();
+                } else if (!isLandingSequence) {
+                    isLandingSequence = true;
+                    landBtn.innerText = "FLY";
+                }
+            });
+            landBtn.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                if (isLanded) startTakeoff();
+                else if (!isLandingSequence) {
+                    isLandingSequence = true;
+                    landBtn.innerText = "FLY";
+                }
+            }, { passive: false });
+
+            // Camera Button Logic Removed
+            // camControls was removed from HTML
+
+
+            speedBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (speedMode === 'NORMAL') {
+                    speedMode = 'SLOW';
+                    speedBtn.innerText = "SLOW";
+                } else {
+                    speedMode = 'NORMAL';
+                    speedBtn.innerText = "NORMAL";
+                }
+            });
+            speedBtn.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                e.preventDefault(); // ダブルタップズームなど防止
+                if (speedMode === 'NORMAL') {
+                    speedMode = 'SLOW';
+                    speedBtn.innerText = "SLOW";
+                } else {
+                    speedMode = 'NORMAL';
+                    speedBtn.innerText = "NORMAL";
+                }
+            }, { passive: false });
+
+            const startInteraction = (e) => {
+                // ボタン類へのタップなら反応しない
+                if (muteBtn.contains(e.target) || landBtn.contains(e.target) || speedBtn.contains(e.target)) return;
+                if (leftArrow.contains(e.target) || rightArrow.contains(e.target)) return;
+                if (isRotatingLeft || isRotatingRight) return;
+
+                // Get coordinates
+                let clientX, clientY;
+                if (e.type === 'mousedown') {
+                    clientX = e.clientX; clientY = e.clientY;
+                } else if (e.type.startsWith('touch')) {
+                    clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+                }
+
+                // Raycaster for Chase Mode
+                if (clientX !== undefined) {
+                    mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
+
+                    if (isChasing) {
+                        // Unselect (Tap Player or anywhere if needed, but user said Tap Player)
+                        // To make it easier, let's allow tapping Player OR just tapping screen to cancel if Player is hard to hit?
+                        // User said: "Tap purple ray to cancel".
+                        const intersects = raycaster.intersectObject(ray, true);
+                        if (intersects.length > 0) {
+                            isChasing = false;
+                            chaseTarget = null;
+                            uiElement.innerText = "なぞって旋回　自由に泳ぐ";
+                            const baseR = 0x05 / 255; const baseG = 0x11 / 255; const baseB = 0x22 / 255;
+                            ray.material.emissive.setRGB(baseR, baseG, baseB);
+                            return;
+                        }
+                    } else {
+                        // Select: Check Guest OR Selection Ring
+                        const targets = [...dailyGuests, ...worldObjects];
+                        // If ring is visible (potentialTarget exists), check it too
+                        if (selectionRing && potentialTarget) targets.push(selectionRing);
+
+                        const intersects = raycaster.intersectObjects(targets, true);
+                        for (let i = 0; i < intersects.length; i++) {
+                            let obj = intersects[i].object;
+
+                            // If Ring Clicked
+                            // If Ring Clicked (or nearby area)
+                            if (potentialTarget) {
+                                // Hitbox Expansion: Check distance from Ray to potentialTarget center
+                                // Radius 8.0 (generous) or 15.0 for Orb
+                                const hitThreshold = (potentialTarget.userData.guestType === 'orb') ? 20.0 : 8.0;
+                                const distToTarget = raycaster.ray.distanceToPoint(potentialTarget.position);
+
+                                if (distToTarget < hitThreshold) {
+                                    if (potentialTarget.userData.guestType === 'orb') {
+                                        // Orb: Do NOT enter Chase Mode on tap
+                                        // No Audio (Silent interaction as per user request)
+                                        return;
+                                    }
+                                    isChasing = true;
+                                    chaseTarget = potentialTarget;
+                                    uiElement.innerText = "CHASE (Tap Ray to Exit)";
+                                    AudioSys.start();
+                                    // Reset Smoothing
+                                    ray.userData.chaseDir = null;
+                                    ray.userData.smoothedTargetPos = null;
+                                    ray.userData.cameraPitch = 0;
+                                    return;
+                                }
+                            }
+
+                            if (obj === selectionRing && potentialTarget) {
+                                if (potentialTarget.userData.guestType === 'orb') {
+                                    // Orb: Do NOT enter Chase Mode on tap
+                                    // No Audio
+                                    return;
+                                }
+                                isChasing = true;
+                                chaseTarget = potentialTarget;
+                                uiElement.innerText = "CHASE (Tap Ray to Exit)";
+                                AudioSys.start();
+                                // Reset Smoothing
+                                ray.userData.chaseDir = null;
+                                ray.userData.smoothedTargetPos = null;
+                                ray.userData.cameraPitch = 0;
+                                return;
+                            }
+
+                            // If Guest Clicked
+                            while (obj.parent && obj !== scene && !obj.userData.isGuest) {
+                                obj = obj.parent;
+                            }
+                            if (obj.userData.isGuest && obj.userData.guestType !== 'orb') {
+                                if (ray.position.distanceTo(obj.position) < 80.0) {
+                                    isChasing = true;
+                                    chaseTarget = obj;
+                                    uiElement.innerText = "CHASE (Tap Ray to Exit)";
+                                    AudioSys.start();
+                                    // Reset Smoothing
+                                    ray.userData.chaseDir = null;
+                                    ray.userData.smoothedTargetPos = null;
+                                    ray.userData.cameraPitch = 0;
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                isTouching = true;
+                AudioSys.start();
+
+                if (isLanded) {
+                    startTakeoff();
+                } else {
+                    updateInput(clientX, clientY);
+                }
+            };
+
+            let lastMouseY = 0;
+
+            const updateCameraPitch = (deltaY) => {
+                if (!isChasing || !ray) return;
+                if (ray.userData.cameraPitch === undefined) ray.userData.cameraPitch = 0;
+                // Drag Down (positive deltaY on screen) -> Pitch Down?
+                // User said: "Trace Up/Down".
+                // Swipe Up (Negative DeltaY) -> Top View (Increase Pitch)?
+                // Swipe Down (Positive DeltaY) -> Behind View (Decrease Pitch)?
+                // Let's invert deltaY.
+                const sensitivity = 0.005;
+                ray.userData.cameraPitch -= deltaY * sensitivity;
+                ray.userData.cameraPitch = Math.max(0, Math.min(1.4, ray.userData.cameraPitch));
+            };
+
+            document.addEventListener('mousemove', (e) => {
+                onInputMove(e);
+                if (e.buttons === 1) updateCameraPitch(e.movementY);
+            });
+            document.addEventListener('mousedown', startInteraction);
+            document.addEventListener('mouseup', () => { isTouching = false; });
+
+            document.addEventListener('touchstart', (e) => {
+                startInteraction(e);
+                lastMouseY = e.touches[0].clientY;
+            }, { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                updateInput(e.touches[0].clientX, e.touches[0].clientY);
+                const currentY = e.touches[0].clientY;
+                const deltaY = currentY - lastMouseY;
+                lastMouseY = currentY;
+                updateCameraPitch(deltaY);
+            }, { passive: false });
+
+            document.addEventListener('touchend', () => {
+                isTouching = false;
+            });
+
+            window.addEventListener('resize', onWindowResize);
+            setInterval(() => updateClock(false), 1000);
+
+            // 初期位置あわせ
+            if (ray && camera) {
+                const dx = camera.position.x - ray.position.x;
+                const dz = camera.position.z - ray.position.z;
+                const currentWorldAngle = Math.atan2(dz, dx);
+                const rayBackAngle = ray.rotation.y + Math.PI / 2;
+                let diff = currentWorldAngle - rayBackAngle;
+                while (diff <= -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                cameraAngle = diff;
+                cameraRotationSpeed = 0;
+            }
+
+            // Auto-Pilot Button Listener
+            const contactLabel = document.getElementById('contact-label');
+            if (contactLabel) {
+                const toggleAutoPilot = (e) => {
+                    e.stopPropagation();
+                    if (contactLabel.classList.contains('active') && potentialTarget) {
+                        isChasing = true;
+                        chaseTarget = potentialTarget;
+                        isAutoPiloting = true;
+                        uiElement.innerText = "AUTO-PILOT ENGAGED";
+                        AudioSys.start();
+                    }
+                };
+                contactLabel.addEventListener('click', toggleAutoPilot);
+                contactLabel.addEventListener('touchstart', (e) => {
+                    e.preventDefault(); // Prevent ghost click
+                    toggleAutoPilot(e);
+                }, { passive: false });
+            }
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            // 環境更新を間引く (毎フレーム -> 3フレームに1回)
+            if (renderer.info.render.frame % 3 === 0) updateEnvironment();
+
+            if (ray) {
+                const baseR = 0x05 / 255; const baseG = 0x11 / 255; const baseB = 0x22 / 255;
+                const targetR = 0xaa / 255; const targetG = 0xdd / 255; const targetB = 0xff / 255;
+                const currentR = baseR + (targetR - baseR) * rayEmissiveIntensity;
+                const currentG = baseG + (targetG - baseG) * rayEmissiveIntensity;
+                const currentB = baseB + (targetB - baseB) * rayEmissiveIntensity;
+                ray.material.emissive.setRGB(currentR, currentG, currentB);
+                rayEmissiveIntensity *= 0.92;
+            }
+
+            updateGuestIndicator();
+
+            if (isLanded) {
+                uiElement.innerText = "タップして離陸　左右で周りを見る";
+                landBtn.innerText = "FLY";
+                leftArrow.style.display = 'block';
+                rightArrow.style.display = 'block';
+                if (ray) {
+                    ray.position.y = CONFIG.landingHeight + Math.sin(time * 2) * 0.2;
+                    ray.rotation.x += (0 - ray.rotation.x) * 0.1;
+                    ray.rotation.z *= 0.9;
+                    const pos = ray.geometry.attributes.position;
+                    for (let i = 0; i < pos.count; i++) {
+                        const x = pos.getX(i);
+                        const dist = Math.abs(x);
+                        // Flapping Animation: Displace Y (Up/Down) based on X
+                        // Plane is flat at Y=0. We simply add the wave to Y.
+                        const wave = Math.sin(time * 1 + x * 0.5) * (dist * 0.1);
+                        pos.setY(i, wave);
+                    }
+                    pos.needsUpdate = true;
+                    if (isRotatingLeft) {
+                        cameraRotationSpeed += 0.001; // Left Button = Positive Rotation
+                    }
+                    else if (isRotatingRight) {
+                        cameraRotationSpeed -= 0.001; // Right Button = Negative Rotation
+                    }
+                    else cameraRotationSpeed *= 0.9;
+
+                    cameraRotationSpeed = Math.max(-0.03, Math.min(0.03, cameraRotationSpeed));
+
+                    // エイを回転させる
+                    if (Math.abs(cameraRotationSpeed) > 0.00001) {
+                        ray.rotation.y += cameraRotationSpeed;
+                    }
+
+                    // Landed Camera
+                    const offset = new THREE.Vector3(0, CONFIG.cameraHeight, -CONFIG.cameraDist);
+                    const targetPos = offset.applyMatrix4(ray.matrixWorld);
+
+                    camera.position.lerp(targetPos, CONFIG.cameraLag);
+                    camera.lookAt(ray.position);
+                }
+                if (speedDisplay) speedDisplay.innerText = "0 km/h";
+                updateVapor(0);
+            } else {
+                leftArrow.style.display = 'none';
+                rightArrow.style.display = 'none';
+                landBtn.innerText = isLandingSequence ? "LANDING..." : "LAND";
+                const fluctuate = (Math.sin(time * 0.3) * 0.5 + 0.5);
+
+                // スピード制御
+                let baseSpd = CONFIG.baseSpeed;
+                if (speedMode === 'SLOW') baseSpd = 0.15; // 20km/h程度になるように調整
+
+                const targetCruiseSpeed = baseSpd + fluctuate * CONFIG.maxSpeedAdd;
+                let currentSpeedKmH = 0;
+                if (isLandingSequence) {
+                    inputVector.set(0, 0);
+                    smoothedInput.lerp(inputVector, 0.05);
+                    ray.translateZ(targetCruiseSpeed * 0.3); // translateY -> translateZ
+                    const targetY = CONFIG.landingHeight - 0.5;
+                    ray.position.y += (targetY - ray.position.y) * 0.02;
+
+                    // Landing Rotation
+                    // Level out to 0 pitch
+                    ray.rotation.x += (0 - ray.rotation.x) * 0.05; // Target 0 instead of -PI/2
+                    ray.rotation.z *= 0.9;
+                    currentSpeedKmH = Math.floor(targetCruiseSpeed * 30);
+                } else {
+                    updateChaseLogic();
+
+                    if (isChasing) {
+                        // Chase Logic Active - Skip Manual Input
+                        // Chase Logic Active
+                        // smoothedInput.set(0, 0); // REMOVED: Allow input for Camera Control
+                        if (!isTouching) smoothedInput.lerp(new THREE.Vector2(0, 0), 0.1); // Decay input if not touching
+                        else smoothedInput.lerp(inputVector, 0.1); // Update input for camera
+
+                        // Collision Checks
+                        if (renderer.info.render.frame % 2 === 0) {
+                            checkCollisions(); // Keep mountain collision? Yes.
+                            checkGuestCollisions();
+                        }
+                        currentSpeedKmH = 50;
+                    } else {
+                        // Manual Flight Logic
+                        if (!isTouching) inputVector.lerp(new THREE.Vector2(0, 0), 0.03);
+                        smoothedInput.lerp(inputVector, 0.03);
+                        let currentSpeed = targetCruiseSpeed;
+                        if (takeoffProgress < 1.0) {
+                            takeoffProgress += 0.003;
+                            currentSpeed *= takeoffProgress;
+                            ray.position.y += 0.1 * (1.0 - takeoffProgress);
+                        }
+                        const turn = -smoothedInput.x * CONFIG.turnSpeed;
+                        ray.rotation.y += turn;
+
+                        // Pitch Control
+                        // Neutral is 0. Up is positive X? No, Right-Hand Rule:
+                        // X axis points Right. Rotate +X => Nose Up? No, Nose Down (Y goes to Z).
+                        // Let's check Three.js coords.
+                        // Forward +Z. Up +Y. Right -X (or +X depending on camera).
+                        // Rotate +X (Pitch Up for plane means nose UP).
+                        // Nose is +Z. Use Right Hand rule on +X axis. Fingers curl Y->Z.
+                        // So +X rotation moves +Y (Up) towards +Z (Forward). Pitch DOWN.
+                        // -X rotation moves +Z (Nose) towards +Y (Up). Pitch UP.
+                        const pitchTarget = smoothedInput.y * 0.8; // Invert input for natural pitch
+                        // Wait, smoothedInput.y: Down is +1? (Screen coords inverted).
+                        // updateInput: y = -(screenY...)*2+1 => Top is +1, Bottom is -1.
+                        // Top (+1) should be Pitch Down (Nose Down) or Pitch Up?
+                        // Usually Forward = Up on screen. So Top(+1) -> Pitch Down (Dive).
+                        // No, Plane sim: Pull back (Down on screen) -> Pitch Up.
+                        // Push forward (Up on screen) -> Pitch Down.
+                        // So Top (+1) -> Pitch Down (+X rot).
+                        // Bottom (-1) -> Pitch Up (-X rot).
+                        // So target = smoothedInput.y * something.
+
+                        const currentX = ray.rotation.x; // Now 0 is neutral
+                        // Inverted controls: Tap Bottom (+y) -> Go Down (Pitch Down +X).
+                        // Tap Top (-y) -> Go Up (Pitch Up -X).
+                        // Previous logic: (smoothedInput.y * 0.8).
+                        // If Input + (Bottom) -> +Diff -> +RotX -> Pitch Down.
+                        // Wait, user said "Tap Below -> Goes Up".
+                        // So my previous assumption of Pitch Direction was wrong?
+                        // If Tap Below currently goes up... I need to FLIP the sign.
+                        // So I will use NEGATIVE input.
+                        const diff = (-smoothedInput.y * 0.8) - currentX;
+
+                        ray.rotation.x += diff * CONFIG.pitchSpeed;
+
+                        const targetRoll = -smoothedInput.x * 0.8;
+                        ray.rotation.z += (targetRoll - ray.rotation.z) * 0.05;
+
+                        ray.translateZ(currentSpeed); // translateY -> translateZ
+                        currentSpeedKmH = Math.floor(currentSpeed * 100);
+                        // 衝突判定も間引く (2フレームに1回)
+                        if (renderer.info.render.frame % 2 === 0) {
+                            checkCollisions();
+                            checkGuestCollisions();
+                        }
+                    }
+                }
+                if (speedDisplay) {
+                    if (isChasing) speedDisplay.innerText = "CHASE MODE";
+                    else speedDisplay.innerText = currentSpeedKmH + " km/h";
+                }
+                updateVapor(currentSpeedKmH);
+                if (ray.position.y < CONFIG.landingHeight) {
+                    if (isLandingSequence) {
+                        isLanded = true;
+                        isLandingSequence = false;
+                        ray.position.y = CONFIG.landingHeight;
+                        if (ray && camera) {
+                            const dx = camera.position.x - ray.position.x;
+                            const dz = camera.position.z - ray.position.z;
+                            const currentWorldAngle = Math.atan2(dz, dx);
+                            // Adjusted for new Forward
+                            // Ray Forward is +Z. Back is -Z.
+                            // Rot Y makes Back rotate.
+                            const rayBackAngle = ray.rotation.y + Math.PI / 2; // Keep for now
+                            // Wait, if RotY=0, Forward=+Z. Back=-Z.
+                            // ATAN2(0, -1) = PI or -PI.
+                            // rayBackAngle should be RayRotY + PI.
+                            // Let's stick to what works roughly or fix later if camera snaps weirdly.
+                            // Previous: RotY + PI/2 because logic assumed X-axis start?
+
+                            let diff = currentWorldAngle - (ray.rotation.y + Math.PI / 2); // Legacy comp
+                            while (diff <= -Math.PI) diff += Math.PI * 2;
+                            while (diff > Math.PI) diff -= Math.PI * 2;
+                            cameraAngle = diff;
+                            cameraRotationSpeed = 0;
+                        }
+                    } else {
+                        // Skim the ground without auto-landing
+                        ray.position.y = CONFIG.landingHeight;
+                        // Optional: Reduce speed slightly or spark effect? For now just clamp.
+                    }
+                }
+                if (ray.position.y > 100) { ray.position.y = 100; ray.rotation.x = 0; } // Limit Height
+                const pos = ray.geometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    const x = pos.getX(i);
+                    const dist = Math.abs(x);
+                    const moveIntensity = Math.abs(smoothedInput.x) + 0.5;
+                    const extra = (1.0 - takeoffProgress) * 5;
+                    const waveSpeed = 2 + moveIntensity * 3 + extra;
+                    const waveHeight = 0.3 + moveIntensity * 0.2 + extra * 0.1;
+                    const wave = Math.sin(time * waveSpeed + x * 0.5) * (dist * waveHeight);
+                    // Flapping Animation for Plane: Set Y directly
+                    pos.setY(i, wave);
+                }
+                pos.needsUpdate = true;
+                // Chase Camera Logic
+                let targetPos;
+                if (isChasing) {
+                    if (ray.userData.cameraPitch === undefined) ray.userData.cameraPitch = 0;
+                    // Swipe control updates cameraPitch directly via updateCameraPitch
+                    ray.userData.cameraPitch = Math.max(0, Math.min(1.4, ray.userData.cameraPitch));
+
+                    const pitchAngle = ray.userData.cameraPitch;
+                    const orbitDist = 40.0;
+                    const camOffset = new THREE.Vector3(0, 0, 0);
+                    camOffset.y = Math.sin(pitchAngle) * orbitDist;
+                    camOffset.z = -Math.cos(pitchAngle) * orbitDist;
+                    camOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), ray.rotation.y);
+                    targetPos = ray.position.clone().add(camOffset);
+                    ray.up.set(0, 1, 0);
+                } else {
+                    // Manual Flight Camera
+                    const offset = new THREE.Vector3(0, CONFIG.cameraHeight, -CONFIG.cameraDist);
+                    targetPos = offset.applyMatrix4(ray.matrixWorld);
+                }
+                camera.position.lerp(targetPos, CONFIG.cameraLag);
+                camera.lookAt(ray.position);
+            }
+
+            if (ray && basePlane) {
+                const rayX = ray.position.x;
+                const rayZ = ray.position.z;
+                basePlane.position.x = rayX;
+                basePlane.position.z = rayZ;
+
+                groundChunks.forEach(chunk => {
+                    let dx = chunk.position.x - rayX;
+                    let dz = chunk.position.z - rayZ;
+                    const halfGrid = Math.floor(CONFIG.gridSize / 2);
+                    const threshold = CONFIG.chunkSize * (halfGrid + 0.5);
+                    const moveAmount = CONFIG.chunkSize * CONFIG.gridSize;
+                    let moved = false;
+                    if (Math.abs(dx) > threshold) {
+                        chunk.position.x -= Math.sign(dx) * moveAmount;
+                        moved = true;
+                    }
+                    dx = chunk.position.x - rayX;
+                    dz = chunk.position.z - rayZ;
+                    if (Math.abs(dz) > threshold) {
+                        chunk.position.z -= Math.sign(dz) * moveAmount;
+                        moved = true;
+                    }
+                    if (moved) updateGroundGeometry(chunk.geometry, chunk.position.x, chunk.position.z);
+                });
+                const loopDist = 2500;
+
+                // Safe Object Loop
+                if (ray) {
+                    [...worldObjects, ...serpents, ...nightLights].forEach(obj => {
+                        const dist = obj.position.distanceTo(ray.position);
+                        if (dist > loopDist) {
+                            if (nightLights.includes(obj)) {
+                                resetNightLightPosition(obj);
+                            } else if (dailyGuests.includes(obj)) {
+                                resetGuestPosition(obj);
+                            } else {
+                                const direction = new THREE.Vector3(0, 1, 0).applyQuaternion(ray.quaternion).normalize();
+                                const angle = Math.atan2(direction.z, direction.x) + (Math.random() - 0.5) * 2.5;
+                                const respawnDist = loopDist - 50;
+                                obj.position.x = ray.position.x + Math.cos(angle) * respawnDist;
+                                obj.position.z = ray.position.z + Math.sin(angle) * respawnDist;
+                                if (obj.geometry && obj.geometry.type === 'SphereGeometry' && obj.material.type === 'MeshLambertMaterial') {
+                                    obj.position.y = -35;
+                                } else if (obj.userData && obj.userData.direction) {
+                                    // Streamer Respawn
+                                    const angle = Math.random() * Math.PI * 2;
+                                    const dist = 500 + Math.random() * 1000;
+                                    obj.position.x = ray.position.x + Math.cos(angle) * dist;
+                                    obj.position.z = ray.position.z + Math.sin(angle) * dist;
+                                    obj.position.y = Math.random() * 50 + 10;
+                                } else {
+                                    obj.position.y = Math.random() * 50 + 20;
+                                    if (obj.material.opacity === 0.3) {
+                                        const scaleH = 15 + Math.random() * 30;
+                                        const scaleV = 3 + Math.random() * 4;
+                                        obj.scale.set(scaleH, scaleV, scaleH * (0.8 + Math.random() * 0.4));
+                                        obj.rotation.y = Math.random() * Math.PI;
+                                    }
+                                }
+                            }
+                        }
+                        if (serpents.includes(obj)) {
+                            const sData = obj.userData;
+                            // シンプルな移動ロジックに戻す (全体に配置)
+                            obj.position.addScaledVector(sData.direction, sData.speed);
+
+                            const positions = obj.geometry.attributes.position;
+                            for (let i = 0; i < positions.count; i++) {
+                                const y = positions.getY(i);
+                                const wave = Math.sin(time * sData.wiggleSpeed + y * 0.1 + sData.offset) * 2.0;
+                                positions.setZ(i, wave);
+                            }
+                            positions.needsUpdate = true;
+                        }
+                        if (obj.userData.isGuest) {
+                            // Velocity Calculation (Stability Fix)
+                            if (!obj.userData.lastPosition) {
+                                obj.userData.lastPosition = obj.position.clone();
+                                obj.userData.velocity = new THREE.Vector3();
+                            } else {
+                                obj.userData.velocity.subVectors(obj.position, obj.userData.lastPosition);
+                                obj.userData.lastPosition.copy(obj.position);
+                            }
+                            if (obj.userData.guestType === 'walker') {
+                                obj.translateZ(obj.userData.walkSpeed);
+                                const wAnim = Math.sin(time * obj.userData.animSpeed);
+                                const limbs = obj.userData.limbs;
+                                if (limbs) {
+                                    limbs.leftArm.rotation.x = wAnim;
+                                    limbs.rightArm.rotation.x = -wAnim;
+                                    limbs.leftLeg.rotation.x = -wAnim;
+                                    limbs.rightLeg.rotation.x = wAnim;
+                                }
+                                obj.rotation.z = Math.sin(time * 5 + obj.userData.phase) * 0.05;
+                            } else if (obj.userData.guestType === 'bird') {
+                                // Straight Flight with Slow Turns
+                                if (!obj.userData.direction) {
+                                    // Fallback init
+                                    obj.userData.direction = new THREE.Vector3(1, 0, 0);
+                                    obj.userData.targetDirection = new THREE.Vector3(1, 0, 0);
+                                    obj.userData.turnTimer = 0;
+                                }
+
+                                // Timer for changing direction
+                                obj.userData.turnTimer--;
+                                if (obj.userData.turnTimer <= 0) {
+                                    // Pick new target direction (Scatter approx 45 degrees)
+                                    const angle = (Math.random() - 0.5) * 1.5; // +/- 0.75 rad (45 deg)
+                                    const currentAngle = Math.atan2(obj.userData.direction.x, obj.userData.direction.z);
+                                    const newAngle = currentAngle + angle;
+                                    obj.userData.targetDirection.set(Math.sin(newAngle), 0, Math.cos(newAngle)).normalize();
+                                    obj.userData.turnTimer = 200 + Math.random() * 400; // 3-10 seconds
+                                }
+
+                                // Smooth Turn
+                                const prevDir = obj.userData.direction.clone();
+                                obj.userData.direction.lerp(obj.userData.targetDirection, 0.005); // Very slow turn
+                                obj.userData.direction.normalize();
+
+                                // Move
+                                obj.position.addScaledVector(obj.userData.direction, obj.userData.flySpeed);
+
+                                // Rotate
+                                const targetRotY = Math.atan2(obj.userData.direction.x, obj.userData.direction.z);
+                                obj.rotation.y = targetRotY;
+
+                                // Bank (Roll) based on turn
+                                // Calculate turn rate
+                                const turnRate = obj.userData.direction.x * prevDir.z - obj.userData.direction.z * prevDir.x; // Cross product Y component approx
+                                // Bank: Turn Left -> Roll Left (positive Z? No, Roll Left is +Z? let's check)
+                                // Right hand rule Z axis out (back).
+                                // Roll Left (Wing Down Left) -> +Z.
+                                // Turn Left -> Positive Cross Y.
+                                // So Roll = TurnRate * factor.
+                                // Let's add oscillation
+                                obj.rotation.z = (turnRate * 800) + Math.sin(time * 10) * 0.1;
+
+                                // はばたき
+                                if (obj.userData.lWing && obj.userData.rWing) {
+                                    const flap = Math.sin(time * 15) * 0.5;
+                                    obj.userData.lWing.rotation.z = 0.3 + flap;
+                                    obj.userData.rWing.rotation.z = -0.3 - flap;
+                                }
+                            } else if (obj.userData.guestType === 'fish') {
+                                // 直進飛行 (鳥と同様)
+                                // Initialize direction if not set (should be set in createFish)
+                                if (!obj.userData.direction) {
+                                    obj.userData.direction = new THREE.Vector3(1, 0, 0);
+                                    obj.userData.targetDirection = new THREE.Vector3(1, 0, 0);
+                                    obj.userData.turnTimer = 0;
+                                    obj.userData.swimSpeed = 0.165; // Default speed if not set
+                                }
+
+                                obj.userData.turnTimer--;
+                                if (obj.userData.turnTimer <= 0) {
+                                    const angle = (Math.random() - 0.5) * 1.5;
+                                    const currentAngle = Math.atan2(obj.userData.direction.x, obj.userData.direction.z);
+                                    const newAngle = currentAngle + angle;
+                                    obj.userData.targetDirection.set(Math.sin(newAngle), 0, Math.cos(newAngle)).normalize();
+                                    obj.userData.turnTimer = 200 + Math.random() * 400;
+                                }
+
+                                // Smooth Turn
+                                const prevDir = obj.userData.direction.clone();
+                                obj.userData.direction.lerp(obj.userData.targetDirection, 0.005);
+                                obj.userData.direction.normalize();
+
+                                // Move
+                                // const varSpeed = 0.165 + Math.sin(time * 0.5 + obj.userData.phase) * 0.055; // Old speed
+                                obj.position.addScaledVector(obj.userData.direction, obj.userData.swimSpeed); // Constant base speed
+
+                                // Rotate
+                                const targetRotY = Math.atan2(obj.userData.direction.x, obj.userData.direction.z);
+                                obj.rotation.y = targetRotY;
+
+                                // Bank (Roll)
+                                const turnRate = obj.userData.direction.x * prevDir.z - obj.userData.direction.z * prevDir.x;
+                                obj.rotation.z = (turnRate * 800) + Math.sin(time * 15) * 0.1; // Add flap oscillation to roll
+
+                                // ヒレ（翼）のはばたき
+                                if (obj.children.length >= 3) { // createFish adds body, lFin, rFin
+                                    // lFin is children[1], rFin is children[2]
+                                    const wingL = obj.children[1];
+                                    const wingR = obj.children[2];
+                                    const flap = Math.sin(time * 10 + obj.userData.phase) * 0.4;
+                                    wingL.rotation.z = -0.3 + flap;
+                                    wingR.rotation.z = 0.3 - flap;
+                                }
+                            } else if (obj.userData.guestType === 'orb') {
+                                // ゆらゆら浮遊（ボビング）
+                                const bob = Math.sin(time * 1 + obj.userData.phase) * 0.1;
+                                obj.position.y += bob;
+                                obj.rotation.y += 0.005;
+                            } else if (obj.userData.guestType === 'npcRay') {
+                                // Ray Movement Logic (Straight with gentle turns)
+                                // Initialize
+                                // Initialize
+                                if (obj.userData.turnTimer === undefined) {
+                                    obj.userData.turnTimer = 0;
+                                }
+
+                                obj.userData.turnTimer--;
+                                if (obj.userData.turnTimer <= 0) {
+                                    // New gentle target direction
+                                    const angle = (Math.random() - 0.5) * 0.5; // Small angle change
+                                    // Rotate vector around Z axis (since local Y is forward, Z is Up/Normal)
+                                    // Actually, Ray is RotX -90. Local Z is Global Y (Up). Local Y is Global -Z (Forward).
+                                    // Wait, let's use global rotation logic similar to Fish but adapted?
+                                    // Fish Logic: Rotates around Global Y.
+                                    // Ray is Flat. Rotation Y controls heading.
+                                    // Let's just adjust Rotation Y directly for heading.
+                                    const currentRotY = obj.rotation.y;
+                                    const newRotY = currentRotY + angle;
+                                    obj.userData.targetRotY = newRotY;
+                                    obj.userData.turnTimer = 300 + Math.random() * 500; // Long intervals
+                                }
+
+                                if (obj.userData.targetRotY === undefined) obj.userData.targetRotY = obj.rotation.y;
+
+                                // Reliable Smooth Turn
+                                const diff = obj.userData.targetRotY - obj.rotation.y;
+                                obj.rotation.y += diff * 0.002; // Very slow turn
+
+                                // Move Forward (Local Y axis)
+                                obj.translateY(obj.userData.swimSpeed);
+
+                                // Gentle Roll (Banking)
+                                obj.rotation.z = Math.sin(time * 1 + obj.userData.phase) * 0.05; // Reduced wobble
+
+                                // ヒレのアニメーション (Slower wave)
+                                const pos = obj.geometry.attributes.position;
+                                for (let i = 0; i < pos.count; i++) {
+                                    const x = pos.getX(i);
+                                    const dist = Math.abs(x);
+                                    const wave = Math.sin(time * 1.0 + x * 0.5 + obj.userData.phase) * (dist * 0.15); // Slowed from 3.0 to 1.0
+                                    pos.setZ(i, wave);
+                                }
+                                pos.needsUpdate = true;
+                            }
+
+                            // --- Mountain Avoidance System ---
+                            // Guests avoid mountains to prevent collisions/jittering.
+                            // --- Mountain Avoidance System ---
+                            if (obj.userData.guestType !== 'orb') {
+                                if (obj.userData.guestType === 'walker') {
+                                    // Walker: Lateral Avoidance (Steer Left/Right)
+                                    const avoidRadius = 60;
+                                    mountains.forEach(mt => {
+                                        const dx = obj.position.x - mt.position.x;
+                                        const dz = obj.position.z - mt.position.z;
+                                        const distSq = dx * dx + dz * dz;
+                                        const mtRadius = 30 * mt.scale.x;
+                                        const safeDist = mtRadius + avoidRadius;
+
+                                        if (distSq < safeDist * safeDist) {
+                                            const dist = Math.sqrt(distSq);
+                                            if (dist < 0.1) return;
+                                            const penetration = safeDist - dist;
+                                            const bx = (obj.position.x - mt.position.x) / dist;
+                                            const bz = (obj.position.z - mt.position.z) / dist;
+
+                                            // Steer
+                                            const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(obj.quaternion);
+                                            const crossY = fwd.z * bx - fwd.x * bz;
+                                            obj.rotation.y += crossY * 0.1;
+                                            obj.position.x += bx * 0.1;
+                                            obj.position.z += bz * 0.1;
+                                        }
+                                    });
+                                } else {
+                                    // Flyers (Bird, Fish, Ray): Vertical Avoidance (Fly Over)
+                                    let targetY = obj.userData.baseY !== undefined ? obj.userData.baseY : (obj.position.y > 10 ? obj.position.y : 10);
+
+                                    const avoidRadius = 150; // Increased radius for faster Rays
+                                    mountains.forEach(mt => {
+                                        const dx = mt.position.x - obj.position.x;
+                                        const dz = mt.position.z - obj.position.z;
+                                        const distSq = dx * dx + dz * dz;
+                                        const mtRadius = 30 * mt.scale.x;
+
+                                        if (distSq < (mtRadius + avoidRadius) ** 2) {
+                                            // Check if mountain is In Front
+                                            let fwd = new THREE.Vector3();
+                                            // STABILITY FIX: For Ray, use Rotation (Heading) directly to ignore wobble/velocity jitter
+                                            if (obj.userData.guestType === 'npcRay') {
+                                                fwd.set(-Math.sin(obj.rotation.y), 0, -Math.cos(obj.rotation.y));
+                                            }
+                                            // Use ACTUAL velocity if moving, as it's the most reliable source for others
+                                            else if (obj.userData.velocity && obj.userData.velocity.lengthSq() > 0.0001) {
+                                                fwd.copy(obj.userData.velocity).normalize();
+                                            } else {
+                                                // Fallback methods
+                                                if (obj.userData.direction) fwd.copy(obj.userData.direction);
+                                                else fwd.set(0, 0, 1).applyQuaternion(obj.quaternion);
+                                            }
+                                            const dist = Math.sqrt(distSq);
+                                            const toMtX = dx / dist;
+                                            const toMtZ = dz / dist;
+                                            const dot = fwd.x * toMtX + fwd.z * toMtZ;
+
+                                            if (dot > 0.4) { // Roughly 60-ish degrees cone
+                                                // Mountain ahead! Calculate required height.
+                                                // Mountain is Sphere-ish. Height ~ scale.y * 30.
+                                                // Let's go comfortably over.
+                                                const mtTop = 30 * mt.scale.y + 25;
+                                                if (targetY < mtTop) targetY = mtTop;
+                                            }
+                                        }
+                                    });
+                                    // Softly approach target altitude
+                                    // Rise fast, Descend slow?
+                                    const diff = targetY - obj.position.y;
+                                    const lerpFactor = diff > 0 ? 0.03 : 0.01; // Faster climb (0.03), slow descend (0.01)
+                                    obj.position.y += diff * lerpFactor;
+                                }
+                            }
+                        }
+                    });
+                }
+            } // Close if(ray)
+            renderer.render(scene, camera);
+        }
+
+        // --- 待機後に開始 ---
+        window.onload = init;
+    </script>
+</body>
+
+</html>
